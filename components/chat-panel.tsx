@@ -36,25 +36,25 @@ export function ChatPanel({
 
   const exampleMessages = [
     {
-      heading: 'What are the',
-      subheading: 'trending memecoins today?',
-      message: `What are the trending memecoins today?`
+      heading: 'Where is my package?',
+      subheading: '',
+      message: `What's your Tracking ID number?`
     },
     {
-      heading: 'What is the price of',
-      subheading: '$DOGE right now?',
-      message: 'What is the price of $DOGE right now?'
+      heading: 'I want to sign up',
+      subheading: 'for package tracking notifications',
+      message: 'What is your email address or phone number?'
     },
-    {
-      heading: 'I would like to buy',
-      subheading: '42 $DOGE',
-      message: `I would like to buy 42 $DOGE`
-    },
-    {
-      heading: 'What are some',
-      subheading: `recent events about $DOGE?`,
-      message: `What are some recent events about $DOGE?`
-    }
+    // {
+    //   heading: 'I would like to buy',
+    //   subheading: '42 $DOGE',
+    //   message: `I would like to buy 42 $DOGE`
+    // },
+    // {
+    //   heading: 'What are some',
+    //   subheading: `recent events about $DOGE?`,
+    //   message: `What are some recent events about $DOGE?`
+    // }
   ]
 
   return (
