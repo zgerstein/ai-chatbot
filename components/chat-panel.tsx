@@ -38,7 +38,7 @@ export function ChatPanel({
     {
       heading: 'Where is my package?',
       subheading: '',
-      message: `What's your Tracking ID number?`
+      message: `Where is my package?`
     },
     {
       heading: 'I want to sign up',

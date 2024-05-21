@@ -49,14 +49,14 @@ async function UserOrLogin() {
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between w-full h-16 px-4 border-b shrink-0 bg-gradient-to-b from-background/10 via-background/50 to-background/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 flex items-center justify-between w-full h-16 px-4 border-b shrink-0 bg-gradient-to-b from-background/10 via-background/50 to-background/80 backdrop-blur-xl" style={{ backgroundColor: 'pink' }}>
       <div className="flex items-center">
         <React.Suspense fallback={<div className="flex-1 overflow-auto" />}>
           <UserOrLogin />
         </React.Suspense>
       </div>
       <div className="flex items-center justify-end space-x-2">
-        <a
+        {/* <a
           target="_blank"
           href="https://github.com/vercel/nextjs-ai-chatbot/"
           rel="noopener noreferrer"
@@ -64,15 +64,15 @@ export function Header() {
         >
           <IconGitHub />
           <span className="hidden ml-2 md:flex">GitHub</span>
-        </a>
+        </a> */}
         <a
-          href="https://vercel.com/templates/Next.js/nextjs-ai-chatbot"
+          href="https://tracking.pandionpro.com/"
           target="_blank"
           className={cn(buttonVariants())}
         >
           <IconVercel className="mr-2" />
-          <span className="hidden sm:block">Deploy to Vercel</span>
-          <span className="sm:hidden">Deploy</span>
+          <span className="hidden sm:block">Track your package</span>
+          <span className="sm:hidden">Track</span>
         </a>
       </div>
     </header>
