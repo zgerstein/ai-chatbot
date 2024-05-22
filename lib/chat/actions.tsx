@@ -37,6 +37,7 @@ import { saveChat } from '@/app/actions'
 import { SpinnerMessage, UserMessage } from '@/components/stocks/message'
 import { Chat, Message } from '@/lib/types'
 import { auth } from '@/auth'
+import { TrackingInfo } from '@/components/stocks/trackingInfo'
 
 async function confirmPurchase(symbol: string, price: number, amount: number) {
   'use server'
@@ -347,7 +348,6 @@ async function submitUserMessage(content: string) {
 
             const data = await response.json();
             console.log('DATA', data);
-            console.log('PARCEL', parcel);
             // then, send the json response to the chatbot and request a user-friendly explanation of the tracking information
             aiState.done({
               ...aiState.get(),
@@ -365,15 +365,33 @@ async function submitUserMessage(content: string) {
                     }
                   ]
                 },
+                // insert a system prompt here that tells gpt to explain the tracking information provided
                 {
                   id: nanoid(),
-                  role: 'tool',
+                  role: 'system',
+                  content: 'Please explain the tracking information including where the package is currently, when it is expected to arrive, and the most recent package status.'
+                },
+                // {
+                //   id: nanoid(),
+                //   role: 'tool',
+                //   content: [
+                //     {
+                //       type: 'tool-result',
+                //       toolName: 'getTrackingInfo',
+                //       toolCallId,
+                //       result: { parcel: data[0] }
+                //     }
+                //   ]
+                // },
+                {
+                  id: nanoid(),
+                  role: 'assistant',
                   content: [
                     {
-                      type: 'tool-result',
-                      toolName: 'getTrackingInfo',
+                      type: 'tool-call',
+                      toolName: 'explainTrackingInfo',
                       toolCallId,
-                      result: { parcel: data[0] }
+                      args: { parcel: data[0] }
                     }
                   ]
                 }
@@ -382,7 +400,7 @@ async function submitUserMessage(content: string) {
 
             return (
               <BotCard>
-                <Parcel props={data[0]} />
+                <TrackingInfo props={data[0]} />
               </BotCard>
             );
 
@@ -390,40 +408,61 @@ async function submitUserMessage(content: string) {
             console.error('ERROR', error);
           }
 
-          // aiState.done({
-          //   ...aiState.get(),
-          //   messages: [
-          //     ...aiState.get().messages,
-          //     {
-          //       id: nanoid(),
-          //       role: 'assistant',
-          //       content: [
-          //         {
-          //           type: 'tool-call',
-          //           toolName: 'getTrackingInfo',
-          //           toolCallId,
-          //           args: { parcel }
-          //         }
-          //       ]
-          //     },
-          //     {
-          //       id: nanoid(),
-          //       role: 'tool',
-          //       content: [
-          //         {
-          //           type: 'tool-result',
-          //           toolName: 'getTrackingInfo',
-          //           toolCallId,
-          //           result: { parcel }
-          //         }
-          //       ]
-          //     }
-          //   ]
-          // })
-
           return (
             <BotCard>
               <div>loading and/or failed... </div>
+            </BotCard>
+          )
+        }
+      },
+      explainTrackingInfo: {
+        description: 'Explain the tracking information to the user.',
+        parameters: z.object({
+          trackingInfo: z.object({
+            trackingId: z.string().describe('The tracking ID of the package. e.g. 2P1234567890'),
+            estimatedDeliveryDate: z.string().describe('The estimated delivery date of the package.'),
+            status: z.string().describe('The status of the package.'),
+            location: z.string().describe('The location of the package.'),
+            lastUpdated: z.string().describe('The last updated time of the package.')
+          })
+        }),
+        generate: async function* ({ trackingInfo }) {
+          const toolCallId = nanoid()
+
+          aiState.done({
+            ...aiState.get(),
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: nanoid(),
+                role: 'assistant',
+                content: [
+                  {
+                    type: 'tool-call',
+                    toolName: 'explainTrackingInfo',
+                    toolCallId,
+                    args: { trackingInfo }
+                  }
+                ]
+              },
+              {
+                id: nanoid(),
+                role: 'tool',
+                content: [
+                  {
+                    type: 'tool-result',
+                    toolName: 'explainTrackingInfo',
+                    toolCallId,
+                    result: { trackingInfo }
+                  }
+                ]
+              }
+            ]
+          })
+
+          return (
+            <BotCard>
+              <TrackingInfo props={trackingInfo} />
             </BotCard>
           )
         }
@@ -706,12 +745,20 @@ export const getUIStateFromAIState = (aiState: Chat) => {
                 {/* @ts-expect-error */}
                 <Events props={tool.result} />
               </BotCard>
-            ) : tool.toolName === 'getTrackingInfo' ? (
+            ) 
+            // : tool.toolName === 'getTrackingInfo' ? (
+            //   <BotCard>
+            //     {/* @ts-expect-error */}
+            //     <Parcel props={tool.result} />
+            //   </BotCard>
+            // ) 
+            : tool.toolName === 'explainTrackingInfo' ? (
               <BotCard>
                 {/* @ts-expect-error */}
-                <Parcel props={tool.result} />
+                <TrackingInfo props={tool.result} />
               </BotCard>
-            ) : null
+            ) :
+            null
           })
         ) : message.role === 'user' ? (
           <UserMessage>{message.content as string}</UserMessage>
