@@ -1,0 +1,24 @@
+    import requests
+
+    def get_parcel_info(tracking_number):
+        base_url = "https://shipper.pandionpro.com/api/v1/packages/statuses"
+        # headers = {"X-Api-Key": api_key}
+        params = {"TrackingIDs": tracking_number}
+        
+        response = requests.get(base_url, headers=headers, params=params)
+        
+        if response.status_code == 200:
+            parcel_info = response.json()
+            return parcel_info
+        else:
+            return None
+
+    # Example usage
+    tracking_number = "2P100000000082889"
+    api_key = "your_api_key_here"  # replace with your actual API key
+    parcel_info = get_parcel_info(tracking_number, api_key)
+
+    if parcel_info:
+        print(parcel_info)
+    else:
+        print("Failed to retrieve package information")

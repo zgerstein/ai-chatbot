@@ -19,12 +19,14 @@ import {
   Purchase
 } from '@/components/stocks'
 
-import { z } from 'zod'
+import { date, z } from 'zod'
 import { EventsSkeleton } from '@/components/stocks/events-skeleton'
 import { Events } from '@/components/stocks/events'
 import { StocksSkeleton } from '@/components/stocks/stocks-skeleton'
 import { Stocks } from '@/components/stocks/stocks'
 import { StockSkeleton } from '@/components/stocks/stock-skeleton'
+import { ParcelSkeleton } from '@/components/stocks/parcel-skeleton'
+import { Parcel } from '@/components/stocks/parcel'
 import {
   formatNumber,
   runAsyncFnWithoutBlocking,
@@ -133,7 +135,8 @@ async function submitUserMessage(content: string) {
     You are a support bot for customers that are looking for their package. You can help them track their package, provide information about the package, and help them with any issues they might have.
     Tracking IDs always start with a "2P". If a user gives you a different tracking ID, ask them to refer to their email or SMS for the correct tracking ID.
     If the user wants to sign up for package tracking notifications, ask them for their email address or phone number.
-    If the user has any other questions at all, then you can help them with that too.
+    If the user has any other questions at all, then you can be friendly, but let them know that you are a support bot for tracking Pandion packages, and you can't help with other issues.
+    If the user provides a tracking ID, call \`getTrackingInfo\` to show the package tracking information. Do not hallucinate the tracking information. If you don't know the status of the package, tell the user that you are unable to find the package.`,
     // You are a stock trading conversation bot and you can help users buy stocks, step by step.
     // You and the user can discuss stock prices and the user can adjust the amount of stocks they want to buy, or place an order, in the UI.
     
@@ -298,6 +301,129 @@ async function submitUserMessage(content: string) {
           return (
             <BotCard>
               <Stock props={{ symbol, price, delta }} />
+            </BotCard>
+          )
+        }
+      },
+      getTrackingInfo: {
+        description: "Get the current status of the package from the Pandion API.",
+        parameters: z.object({
+          // todo: make param just trackingId
+          // you don't have a parcel yet, just the user's supplied id
+          parcel: z.object({
+            trackingId: z.string().describe('The tracking ID of the package. e.g. 2P1234567890'),
+          })
+        }),
+        generate: async function* ({ parcel }) {
+          yield (
+            <BotCard>
+              <ParcelSkeleton />
+            </BotCard>
+          )
+
+          await sleep(1000)
+
+          const toolCallId = nanoid();
+
+          // when a user provides a valid tracking ID, call the pandion API to get the tracking information
+          const url = `https://shipper.pandionpro.com/api/v1/packages/statuses?TrackingIDs=${parcel.trackingId}`
+
+          try {
+            const response = await fetch(url, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Api-Key': '2F3259BA55274AE58EC7E01172388AAE'
+              }
+            });
+
+            if (response.status === 401) {
+              throw new Error('Unauthorized');
+            }
+
+            if (!response.ok) {
+              throw new Error('Failed to fetch tracking information');
+            }
+
+            const data = await response.json();
+            console.log('DATA', data);
+            console.log('PARCEL', parcel);
+            // then, send the json response to the chatbot and request a user-friendly explanation of the tracking information
+            aiState.done({
+              ...aiState.get(),
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: nanoid(),
+                  role: 'assistant',
+                  content: [
+                    {
+                      type: 'tool-call',
+                      toolName: 'getTrackingInfo',
+                      toolCallId,
+                      args: { parcel }
+                    }
+                  ]
+                },
+                {
+                  id: nanoid(),
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'getTrackingInfo',
+                      toolCallId,
+                      result: { parcel: data[0] }
+                    }
+                  ]
+                }
+              ]
+            });
+
+            return (
+              <BotCard>
+                <Parcel props={data[0]} />
+              </BotCard>
+            );
+
+          } catch (error) {
+            console.error('ERROR', error);
+          }
+
+          // aiState.done({
+          //   ...aiState.get(),
+          //   messages: [
+          //     ...aiState.get().messages,
+          //     {
+          //       id: nanoid(),
+          //       role: 'assistant',
+          //       content: [
+          //         {
+          //           type: 'tool-call',
+          //           toolName: 'getTrackingInfo',
+          //           toolCallId,
+          //           args: { parcel }
+          //         }
+          //       ]
+          //     },
+          //     {
+          //       id: nanoid(),
+          //       role: 'tool',
+          //       content: [
+          //         {
+          //           type: 'tool-result',
+          //           toolName: 'getTrackingInfo',
+          //           toolCallId,
+          //           result: { parcel }
+          //         }
+          //       ]
+          //     }
+          //   ]
+          // })
+
+          return (
+            <BotCard>
+              <div>loading and/or failed... </div>
             </BotCard>
           )
         }
@@ -579,6 +705,11 @@ export const getUIStateFromAIState = (aiState: Chat) => {
               <BotCard>
                 {/* @ts-expect-error */}
                 <Events props={tool.result} />
+              </BotCard>
+            ) : tool.toolName === 'getTrackingInfo' ? (
+              <BotCard>
+                {/* @ts-expect-error */}
+                <Parcel props={tool.result} />
               </BotCard>
             ) : null
           })
